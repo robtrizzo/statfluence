@@ -3,7 +3,9 @@ export type PlayerStat = {
   Date: string;
   Age: string;
   Tm: string;
+  Away: boolean;
   Opp: string;
+  WDiff: string;
   GS: number;
   MP: string;
   FG: number;
@@ -29,33 +31,35 @@ export type PlayerStat = {
 };
 
 export const playerStatHeaders = [
-  "Rk",
-  "Date",
-  "Age",
-  "Tm",
-  "Opp",
-  "GS",
-  "MP",
-  "FG",
-  "FGA",
-  "FG%",
-  "3P",
-  "3PA",
-  "3P%",
-  "FT",
-  "FTA",
-  "FT%",
-  "ORB",
-  "DRB",
-  "TRB",
-  "AST",
-  "STL",
-  "BLK",
-  "TOV",
-  "PF",
-  "PTS",
-  "GmSc",
-  "SeasonType",
+  "Rk", // Rank / Game number
+  "Date", // Date of the game
+  "Age", // Age of the player (format: "YY-DDD")
+  "Tm", // Team
+  "Away", // Away game (1 for away, 0 for home)
+  "Opp", // Opponent
+  "WDiff", // Win Difference (W/L margin)
+  "GS", // Games Started (1 for started, 0 for not)
+  "MP", // Minutes Played
+  "FG", // Field Goals Made (all shots except free throws)
+  "FGA", // Field Goals Attempted
+  "FG%", // Field Goal Percentage
+  "3P", // Three-Point Field Goals Made
+  "3PA", // Three-Point Field Goals Attempted
+  "3P%", // Three-Point Field Goal Percentage
+  "FT", // Free Throws Made
+  "FTA", // Free Throws Attempted
+  "FT%", // Free Throw Percentage
+  "ORB", // Offensive Rebounds
+  "DRB", // Defensive Rebounds
+  "TRB", // Total Rebounds
+  "AST", // Assists
+  "STL", // Steals
+  "BLK", // Blocks
+  "TOV", // Turnovers
+  "PF", // Personal Fouls
+  "PTS", // Points
+  "GmSc", // Game Score (advanced metric)
+  "SeasonType", // Season Type
 ];
 
 export const playerStats: PlayerStat[] = [
@@ -64,7 +68,9 @@ export const playerStats: PlayerStat[] = [
     Date: "2022-08-18",
     Age: "22-024",
     Tm: "WAS",
+    Away: true,
     Opp: "SEA",
+    WDiff: "L (-3)",
     GS: 1,
     MP: "25:25",
     FG: 6,
@@ -93,7 +99,9 @@ export const playerStats: PlayerStat[] = [
     Date: "2022-06-28",
     Age: "21-338",
     Tm: "WAS",
+    Away: false,
     Opp: "ATL",
+    WDiff: "W (+18)",
     GS: 1,
     MP: "22:18",
     FG: 3,
@@ -122,7 +130,9 @@ export const playerStats: PlayerStat[] = [
     Date: "2022-07-03",
     Age: "21-343",
     Tm: "WAS",
+    Away: true,
     Opp: "CON",
+    WDiff: "L (-2)",
     GS: 1,
     MP: "29:16",
     FG: 4,
