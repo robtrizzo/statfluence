@@ -62,9 +62,12 @@ export const columns: ColumnDef<PlayerStat>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() =>
-                navigator.clipboard.writeText(playerStat.Rk.toString())
-              }
+              onClick={() => {
+                const rk = playerStat.rk?.toString();
+                if (rk) {
+                  navigator.clipboard.writeText(rk);
+                }
+              }}
             >
               Copy Rk
             </DropdownMenuItem>

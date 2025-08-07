@@ -70,7 +70,7 @@ export function DataTable<TData, TValue>({
         <Input
           placeholder="Filter season type..."
           value={
-            (table.getColumn("SeasonType")?.getFilterValue() as string) ?? ""
+            (table.getColumn("seasonType")?.getFilterValue() as string) ?? ""
           }
           onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
             table.getColumn("SeasonType")?.setFilterValue(event.target.value)
