@@ -6,7 +6,7 @@ export default function Home() {
       <TypographyH1>Statfluence</TypographyH1>
 
       <main className="mt-8">
-        <TypographyP>WIP coming soon! Andrew was here</TypographyP>
+        <TypographyP>WIP coming soon! Andrew wasn't here</TypographyP>
       </main>
     </div>
   );
