@@ -9,5 +9,7 @@ export type Stat = {
   type: "basic" | "percentage";
   unit?: string;
   trend?: "up" | "down" | "stable";
+  compareTo?: Stat;
+  percentDiff?: number;
   color?: string;
 };

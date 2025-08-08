@@ -69,8 +69,10 @@ async function PlayerStats({ playerid }: { playerid: string }) {
     currentSeasonStats.forEach((stat) => {
       const pastStat = pastThreeSeasonsStats.find((s) => s.name === stat.name);
       if (pastStat) {
+        stat.compareTo = pastStat;
         const percentageChange =
           ((stat.value - pastStat.value) / pastStat.value) * 100;
+        stat.percentDiff = percentageChange;
         if (Math.abs(percentageChange) <= 5) {
           stat.trend = "stable";
         } else {
@@ -82,7 +84,11 @@ async function PlayerStats({ playerid }: { playerid: string }) {
 
     return (
       <div>
-        <StatsCard title="Current Season Stats" stats={currentSeasonStats} />
+        <StatsCard
+          title="Current Season Stats"
+          stats={currentSeasonStats}
+          hover
+        />
         <StatsCard
           title="Past Three Seasons Stats"
           stats={pastThreeSeasonsStats}
