@@ -1,0 +1,1 @@
+ALTER TABLE `player-stats` RENAME TO `player_stats`;
