@@ -71,9 +71,10 @@ export async function getCurrentSeasonPlayerSummary(playerid: string) {
   console.log(`Fetched ${stats.length} stats for player: ${playerid}`);
 
   if (stats.length === 0) {
-    throw new Error(
+    console.warn(
       `No stats found for player ${playerid} in year ${currentYear}`
     );
+    return [];
   }
 
   const summary = getPlayerStatsAverages(stats);
@@ -115,6 +116,9 @@ export async function getPastSeasonsPlayerSummary(
     );
 
   if (stats.length === 0) {
+    console.warn(
+      `No stats found for player ${playerid} in years ${startYear}-${endYear}`
+    );
     return [];
   }
 
