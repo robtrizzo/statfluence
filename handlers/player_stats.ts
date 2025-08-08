@@ -1,7 +1,7 @@
 import { playerStatsTable } from "@/db/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { Stat } from "@/types/stat";
+import { Stat } from "@/types/ui";
 
 export async function getAllPlayerStats(limit?: number, offset?: number) {
   const stats = await db
