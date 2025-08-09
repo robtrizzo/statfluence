@@ -29,6 +29,8 @@ type Row = {
   stl: number;
   blk: number;
   tov: number;
+  power: number;
+  powerRank: number;
   pos?: string;
   team?: string;
   mpArrow?: string;
@@ -40,7 +42,7 @@ type Row = {
   tovArrow?: string;
 };
 
-type SortKey = "mp" | "pts" | "fgPct" | "ast" | "stl" | "blk" | "tov";
+type SortKey = "power" | "mp" | "pts" | "fgPct" | "ast" | "stl" | "blk" | "tov";
 type SortDir = "asc" | "desc";
 
 function arrowEl(arrow?: string, invert: boolean = false) {
@@ -52,7 +54,7 @@ function arrowEl(arrow?: string, invert: boolean = false) {
 
 export default function PlayerStatsTable({
   rows,
-  defaultSort = { key: "pts", dir: "desc" as SortDir },
+  defaultSort = { key: "power", dir: "desc" as SortDir },
 }: {
   rows: Row[];
   defaultSort?: { key: SortKey; dir: SortDir };
@@ -153,6 +155,7 @@ const sorted = useMemo(() => {
         <TableHeader>
           <TableRow>
             <TableHead>Player</TableHead>
+            <TableHead role="button" onClick={() => onHeaderClick("power")} className="cursor-pointer select-none">Power Rankings {sortKey === "power" ? (sortDir === "desc" ? "▼" : "▲") : ""}</TableHead>
             <TableHead role="button" onClick={() => onHeaderClick("mp")} className="cursor-pointer select-none">
               MP {sortKey === "mp" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
@@ -182,6 +185,7 @@ const sorted = useMemo(() => {
               <TableCell className="font-medium">
                 <Link href={`/players/${r.slug}`}>{r.name}</Link>
               </TableCell>
+              <TableCell>{r.powerRank}</TableCell>
               <TableCell>{r.mp.toFixed(1)} {arrowEl(r.mpArrow)}</TableCell>
               <TableCell>{r.pts.toFixed(1)} {arrowEl(r.ptsArrow)}</TableCell>
               <TableCell>{(r.fgPct * 100).toFixed(1)}% {arrowEl(r.fgPctArrow)}</TableCell>

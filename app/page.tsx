@@ -301,6 +301,9 @@ export default async function Home({ searchParams }: { searchParams?: { team?: s
 
     const latest = r5 ?? { ...s };
     const name = nameMap[s.player_id] ?? s.player_id;
+    const seasonPR = (s.pts ?? 0) + (10/12.5)*(s.trb ?? 0) + (10/6.5)*(s.ast ?? 0) + (10/3)*(s.stl ?? 0) + (10/3)*(s.blk ?? 0);
+    const last5PR = r5 ? ((r5.pts ?? 0) + (10/12.5)*(r5.trb ?? 0) + (10/6.5)*(r5.ast ?? 0) + (10/3)*(r5.stl ?? 0) + (10/3)*(r5.blk ?? 0)) : seasonPR;
+    const power = 0.75 * seasonPR + 0.25 * last5PR;
 
     // arrows based on ±10% vs season average; TOV inverted in client
     function pctDeltaArrow(latest: number, season: number) {
@@ -320,6 +323,7 @@ export default async function Home({ searchParams }: { searchParams?: { team?: s
         .trim()
         .replace(/\\s+/g, "-")
         .replace(/-+/g, "-"),
+      power: power,
       pts: s.pts,
       ptsArrow: r5 ? pctDeltaArrow(latest.pts, s.pts) : "",
       fgPct: s.fgPct,
@@ -338,13 +342,25 @@ export default async function Home({ searchParams }: { searchParams?: { team?: s
       mpArrow: r5 ? pctDeltaArrow(latest.mp, s.mp) : "",
     };
   });
-  const posMap = loadPositionMap(chosenYear);
+  
+  // === Power Rankings (rank numbers) ===
+  const rankById = new Map<string, number>();
+  [...rows]
+    .sort((a, b) => (b.power ?? 0) - (a.power ?? 0))
+    .forEach((r, i) => rankById.set(r.player_id, i + 1));
+
+  const rowsWithRank = rows.map(r => ({
+    ...r,
+    powerRank: rankById.get(r.player_id) || rows.length,
+  }));
+
+const posMap = loadPositionMap(chosenYear);
   const teamMap = loadTeamMap(chosenYear);
 
   
   const teamOptionsLocal = await getTeamOptions(chosenYear, chosenSeasonType);
   const positionOptionsLocal = await getPositionOptions(chosenYear);
-const enrichedRows = rows.map((r) => ({ ...r, pos: mapPosToBucket(posMap[r.player_id] ?? ''), team: teamMap[r.player_id] ?? '' }));
+const enrichedRows = rowsWithRank.map((r) => ({ ...r, pos: mapPosToBucket(posMap[r.player_id] ?? ''), team: teamMap[r.player_id] ?? '' }));
 
 
   const debug: DebugInfo = {
