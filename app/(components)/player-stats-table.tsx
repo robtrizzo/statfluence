@@ -1,6 +1,18 @@
 
 "use client";
 
+const ALL_SENTINEL = "__ALL__";
+
+const POS_GROUPS = {
+  Centers: new Set<string>(["C", "C-F", "F-C"]),
+  Forwards: new Set<string>(["F", "C-F", "F-C", "F-G", "G-F"]),
+  Guards: new Set<string>(["G", "F-G", "G-F"]),
+} as const;
+
+type PosBucket = keyof typeof POS_GROUPS;
+const POS_OPTIONS: PosBucket[] = ["Centers", "Forwards", "Guards"];
+
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,6 +29,8 @@ type Row = {
   stl: number;
   blk: number;
   tov: number;
+  pos?: string;
+  team?: string;
   mpArrow?: string;
   ptsArrow?: string;
   fgPctArrow?: string;
@@ -47,16 +61,44 @@ export default function PlayerStatsTable({
   const [sortDir, setSortDir] = useState<SortDir>(defaultSort.dir);
   const [limit, setLimit] = useState<number>(15);
 
-  const sorted = useMemo(() => {
+  
+  const [team, setTeam] = useState<string>("");
+  const [pos, setPos] = useState<string>("");
+  const teamOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) {
+      if (r.team) s.add(String(r.team).toUpperCase());
+    }
+    return Array.from(s).sort();
+  }, [rows]);
+
+  const positionOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) {
+      if (r.pos) s.add(String(r.pos).toUpperCase());
+    }
+    return Array.from(s).sort();
+  }, [rows]);
+
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      const okTeam = team ? (r.team || "").toUpperCase() === team : true;
+      const posVal = (r.pos || "").toUpperCase();
+      const okPos = pos ? (posVal === pos || posVal.split("-").includes(pos)) : true;
+      return okTeam && okPos;
+    });
+  }, [rows, team, pos]);
+const sorted = useMemo(() => {
     const mul = sortDir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const av = (a as any)[sortKey] ?? 0;
       const bv = (b as any)[sortKey] ?? 0;
       if (av < bv) return -1 * mul;
       if (av > bv) return 1 * mul;
       return 0;
     });
-  }, [rows, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
 
   const pageRows = useMemo(() => sorted.slice(0, limit), [sorted, limit]);
 
@@ -72,6 +114,26 @@ export default function PlayerStatsTable({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 justify-end">
+        <span className="text-sm text-muted-foreground">Team</span>
+        <Select value={team || ALL_SENTINEL} onValueChange={(v) => setTeam(v === ALL_SENTINEL ? "" : v)}>
+          <SelectTrigger className="w-[120px]"><SelectValue placeholder="All" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SENTINEL}>All</SelectItem>
+            {teamOptions.map((t) => (
+              <SelectItem key={t} value={t.toUpperCase()}>{t}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">Pos</span>
+        <Select value={pos || ALL_SENTINEL} onValueChange={(v) => setPos(v === ALL_SENTINEL ? "" : v)}>
+          <SelectTrigger className="w-[120px]"><SelectValue placeholder="All" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_SENTINEL}>All</SelectItem>
+            {positionOptions.map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-sm text-muted-foreground">Show</span>
         <Select value={String(limit)} onValueChange={(v) => setLimit(parseInt(v))}>
           <SelectTrigger className="w-[100px]">

@@ -1,19 +1,17 @@
 import { PlayerCombobox } from "@/components/ui/player-combobox";
-import { getPlayerIds } from "@/handlers/players";
+import { getPlayersForYearWithNames } from "@/handlers/players";
 import { ComboboxPlayer } from "@/types/ui";
 
 export default async function PlayerSearch() {
-  const playerIds = await getPlayerIds();
+  const players = await getPlayersForYearWithNames(2025);
 
-  if (!playerIds.length) {
+  if (!players.length) {
     return <div>No players found.</div>;
   }
 
   return (
     <PlayerCombobox
-      players={playerIds.map(
-        (pid) => ({ value: pid, label: pid } as ComboboxPlayer)
-      )}
+      players={players.map((p) => ({ value: p.id, label: p.name } as ComboboxPlayer))}
     />
   );
 }

@@ -95,7 +95,12 @@ export default async function Page({
   if (!playerId || !displayName) {
     return (
       <div className="p-8">
-        <TypographyH1>Player not found</TypographyH1>
+        <div className="w-full flex items-center justify-center my-4">
+  <a href="/" aria-label="Home">
+    <img src="/logo-statfluence.svg" alt="Statfluence" className="h-12 md:h-14 w-auto hover:opacity-90 transition-opacity" />
+  </a>
+</div>
+<TypographyH1>Player not found</TypographyH1>
         <TypographyP className="mt-2">
           We couldn&apos;t find a player for &quot;{rawParam}&quot;.
         </TypographyP>
@@ -105,7 +110,12 @@ export default async function Page({
 
   return (
     <div className="p-8">
-      <TypographyH1>{displayName}</TypographyH1>
+      <div className="w-full flex items-center justify-center my-4">
+  <a href="/" aria-label="Home">
+    <img src="/logo-statfluence.svg" alt="Statfluence" className="h-12 md:h-14 w-auto hover:opacity-90 transition-opacity" />
+  </a>
+</div>
+<TypographyH1>{displayName}</TypographyH1>
 
       <Suspense fallback={<Loader className="animate-spin" />}>
         {/* pass the resolved canonical playerId */}
