@@ -1,0 +1,28 @@
+import { sqliteView, integer, real, text } from "drizzle-orm/sqlite-core";
+
+export const teamSeasonSummaryV = sqliteView("team_season_summary_v", {
+  teamId: text("team_id").notNull(),
+  teamName: text("team_name").notNull(),
+  year: integer("year").notNull(),
+  seasonType: text("season_type").notNull(),
+  gpSum: integer("gp").notNull(),
+  rosterSize: integer("roster_size").notNull(),
+  fgm: integer("fgm").notNull(),
+  fga: integer("fga").notNull(),
+  tpm: integer("tpm").notNull(),
+  tpa: integer("tpa").notNull(),
+  ftm: integer("ftm").notNull(),
+  fta: integer("fta").notNull(),
+  oreb: integer("oreb").notNull(),
+  dreb: integer("dreb").notNull(),
+  reb: integer("reb").notNull(),
+  ast: integer("ast").notNull(),
+  stl: integer("stl").notNull(),
+  blk: integer("blk").notNull(),
+  tov: integer("tov").notNull(),
+  pts: integer("pts").notNull(),
+  fgPct: real("fg_pct").notNull(),
+  tpPct: real("tp_pct").notNull(),
+  ftPct: real("ft_pct").notNull(),
+  tsPct: real("ts_pct").notNull(),
+});

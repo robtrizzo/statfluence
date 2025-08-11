@@ -1,12 +1,117 @@
-import { TypographyH1 } from "@/components/ui/typography";
+import "server-only";
 import { db } from "@/db";
-import { playerStatsTable } from "@/db/schema";
-import { desc, eq, and, sql } from "drizzle-orm";
-import fs from "fs";
-import path from "path";
 import PlayerStatsTable from "./(components)/player-stats-table";
+import Link from "next/link";
+import Image from "next/image";
 
-function mapPosToBucket(raw) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// ---- Lazy server-only requires to keep Turbopack happy ----
+let __fs: any | null = null;
+let __path: any | null = null;
+function getFs() { if (!__fs) __fs = require("fs"); return __fs; }
+function getPath() { if (!__path) __path = require("path"); return __path; }
+
+type Row = {
+  player_id: string;
+  name: string;
+  slug: string;
+  mp: number;
+  pts: number;
+  fgPct: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  power: number;
+  powerRank: number;
+  pos?: string;
+  team?: string;
+  mpArrow?: string;
+  ptsArrow?: string;
+  fgPctArrow?: string;
+  astArrow?: string;
+  stlArrow?: string;
+  blkArrow?: string;
+  tovArrow?: string;
+};
+
+function slugifyName(name: string) {
+  return (name || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-") || "unknown";
+}
+
+function loadNameMap(): Record<string, string> {
+  try {
+    const csvPath = getPath().join(process.cwd(), "Data", "wnba_player_ids_master.csv");
+    if (!getFs().existsSync(csvPath)) return {};
+    const raw = getFs().readFileSync(csvPath, "utf-8");
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    if (lines.length) lines.shift();
+    const map: Record<string, string> = {};
+    for (const line of lines) {
+      const [name, pid] = line.split(",");
+      if (name && pid) map[pid.trim()] = name.trim();
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+function loadPosMap(year: number): Record<string, string> {
+  try {
+    const idToName = loadNameMap();
+    const csvPath = getPath().join(process.cwd(), "Data", `wnba_player_per_game_${year}.csv`);
+    if (!getFs().existsSync(csvPath)) return {};
+    const raw = getFs().readFileSync(csvPath, "utf-8");
+    const lines = raw.split(/\r?\n/).filter(Boolean);
+    if (lines.length <= 1) return {};
+    const header = lines.shift()!;
+    const headers = header.split(",");
+    const idxPlayer = headers.findIndex((h) => h.trim().toLowerCase() === "player");
+    const idxPos = headers.findIndex((h) => h.trim().toLowerCase() === "pos");
+    const idxTeam = headers.findIndex((h) => h.trim().toLowerCase() === "team");
+    if (idxPlayer < 0) return {};
+    const nameToPos = new Map<string, string>();
+    const nameToTeam = new Map<string, string>();
+    for (const line of lines) {
+      const cols = line.split(",");
+      const nm = (cols[idxPlayer] ?? "").trim();
+      if (!nm) continue;
+      if (idxPos >= 0) {
+        const pos = (cols[idxPos] ?? "").trim();
+        if (pos) nameToPos.set(nm, pos);
+      }
+      if (idxTeam >= 0) {
+        const tm = (cols[idxTeam] ?? "").trim();
+        if (tm) nameToTeam.set(nm, tm);
+      }
+    }
+    const idToPos: Record<string, string> = {};
+    const idToTeam: Record<string, string> = {};
+    for (const [id, nm] of Object.entries(idToName ?? {})) {
+      if (nameToPos.has(nm)) idToPos[id] = nameToPos.get(nm)!;
+      if (nameToTeam.has(nm)) idToTeam[id] = nameToTeam.get(nm)!;
+    }
+    (loadPosMap as any).__team = idToTeam;
+    return idToPos;
+  } catch {
+    return {};
+  }
+}
+function getTeamFromPosMap(playerId: string): string | undefined {
+  const t = (loadPosMap as any).__team as Record<string,string> | undefined;
+  return t ? t[playerId] : undefined;
+}
+
+function mapPosToBucket(raw?: string) {
   const r = (raw || "").toUpperCase();
   if (["C", "C-F", "F-C"].includes(r)) return "Centers";
   if (["F", "C-F", "F-C", "F-G", "G-F"].includes(r)) return "Forwards";
@@ -14,495 +119,133 @@ function mapPosToBucket(raw) {
   return "";
 }
 
-
-const MAX_PLAYERS = 120;
-
-type SeasonRow = {
-  player_id: string;
-  pts: number;
-  fga: number;
-  fg: number;
-  fgPct: number;
-  trb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  tov: number;
-  mp: number;
-};
-
-type DebugInfo = {
-  chosenYear: number;
-  chosenSeasonType: string | null;
-  seasonTypeOptions: string[];
-  yearOptions: number[];
-  rowCount: number;
-};
-
-function slugifyName(name: string) {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^a-z0-9\\s-]/g, "")
-    .trim()
-    .replace(/\\s+/g, "-")
-    .replace(/-+/g, "-");
+function powerScore(p: { pts:number; ast:number; stl:number; blk:number; tov:number }) {
+  return p.pts + p.ast*1.1 + p.stl*1.2 + p.blk*1.0 - p.tov*1.3;
 }
 
-function pctDeltaArrow(latest: number, season: number) {
-  // returns "▲" | "▼" | ""
-  if (season === 0) return "";
-  const delta = (latest - season) / season;
-  if (delta >= 0.1) return "▲";
-  if (delta <= -0.1) return "▼";
-  return "";
+function arrow(delta: number): "▲" | "▼" | undefined {
+  if (!isFinite(delta) || Math.abs(delta) < 1e-6) return undefined;
+  return delta > 0 ? "▲" : "▼";
 }
 
-async function getYearOptions() {
-  const rows = await db
-    .select({ year: playerStatsTable.year })
-    .from(playerStatsTable)
-    .groupBy(playerStatsTable.year)
-    .orderBy(desc(playerStatsTable.year));
-  return rows
-    .map((r) => Number(r.year))
-    .filter((v): v is number => typeof v === "number" && !Number.isNaN(v));
-}
+export default async function Home() {
+  const anyDb: any = db as any;
+  const client = anyDb.client ?? anyDb.$client ?? anyDb._client;
+  if (!client) throw new Error("DB client unavailable");
 
-async function getSeasonTypeOptions(year?: number) {
-  const q = db
-    .select({ seasonType: playerStatsTable.seasonType })
-    .from(playerStatsTable);
-  const rows = year
-    ? await q
-        .where(eq(playerStatsTable.year, year))
-        .groupBy(playerStatsTable.seasonType)
-    : await q.groupBy(playerStatsTable.seasonType);
-  return rows.map((r) => r.seasonType).filter((v): v is string => !!v);
-}
+  const yrs = await client.execute("SELECT DISTINCT year FROM player_stats ORDER BY year DESC");
+  const chosenYear = Number(yrs.rows?.[0]?.year ?? new Date().getFullYear());
+  const st = await client.execute("SELECT DISTINCT season_type FROM player_stats WHERE year = ? ORDER BY season_type", [chosenYear]);
+  const stVals = st.rows.map((r: any) => String(r.season_type || ""));
+  const chosenSeason = stVals.find((s: string) => s.toLowerCase().startsWith("regular")) || stVals[0] || null;
 
-async function getSeasonAverages(year: number, seasonType: string | null) {
-  const avgPts = sql<number>`avg(${playerStatsTable.pts})`.as("pts");
-  const avgFga = sql<number>`avg(${playerStatsTable.fga})`.as("fga");
-  const avgFg = sql<number>`avg(${playerStatsTable.fg})`.as("fg");
-  const avgTrb = sql<number>`avg(${playerStatsTable.trb})`.as("trb");
-  const avgAst = sql<number>`avg(${playerStatsTable.ast})`.as("ast");
-  const avgStl = sql<number>`avg(${playerStatsTable.stl})`.as("stl");
-  const avgBlk = sql<number>`avg(${playerStatsTable.blk})`.as("blk");
-  const avgTov = sql<number>`avg(${playerStatsTable.tov})`.as("tov");
-  const avgMp = sql<number>`avg(${playerStatsTable.mp})`.as("mp");
+  const where = chosenSeason ? "WHERE year = ? AND season_type = ?" : "WHERE year = ?";
+  const params = chosenSeason ? [chosenYear, chosenSeason] : [chosenYear];
 
-  const whereClause = seasonType
-    ? and(
-        eq(playerStatsTable.year, year),
-        eq(playerStatsTable.seasonType, seasonType)
-      )
-    : eq(playerStatsTable.year, year);
-
-  const rows = await db
-    .select({
-      player_id: playerStatsTable.player_id,
-      pts: avgPts,
-      fga: avgFga,
-      fg: avgFg,
-      trb: avgTrb,
-      ast: avgAst,
-      stl: avgStl,
-      blk: avgBlk,
-      tov: avgTov,
-      mp: avgMp,
-    })
-    .from(playerStatsTable)
-    .where(whereClause)
-    .groupBy(playerStatsTable.player_id)
-    .orderBy(desc(sql`avg(${playerStatsTable.pts})`));
-
-  const mapped: SeasonRow[] = rows.map((r) => ({
-    player_id: r.player_id ?? "",
+  const baseSql = `
+    SELECT player_id, tm, date, mp, pts, fg, fga, ast, stl, blk, tov
+    FROM player_stats
+    ${where}
+  `;
+  const baseRes = await client.execute(baseSql, params as any);
+  const base = (baseRes.rows as any[]).map(r => ({
+    player_id: String(r.player_id),
+    tm: r.tm ? String(r.tm).toUpperCase() : "",
+    date: String(r.date || ""),
+    mp: Number(r.mp ?? 0),
     pts: Number(r.pts ?? 0),
-    fga: Number(r.fga ?? 0),
     fg: Number(r.fg ?? 0),
-    fgPct: Number(r.fga ? Number(r.fg ?? 0) / Number(r.fga) : 0),
-    trb: Number(r.trb ?? 0),
+    fga: Number(r.fga ?? 0),
     ast: Number(r.ast ?? 0),
     stl: Number(r.stl ?? 0),
     blk: Number(r.blk ?? 0),
     tov: Number(r.tov ?? 0),
-    mp: Number(r.mp ?? 0),
   }));
 
-  return mapped;
-}
-
-async function getLast5AveragesByPlayer(
-  year: number,
-  playerIds: string[],
-  seasonType: string | null
-) {
-  const map = new Map<string, SeasonRow>();
-
-  for (const pid of playerIds) {
-    const whereClause = seasonType
-      ? and(
-          eq(playerStatsTable.year, year),
-          eq(playerStatsTable.seasonType, seasonType),
-          eq(playerStatsTable.player_id, pid)
-        )
-      : and(
-          eq(playerStatsTable.year, year),
-          eq(playerStatsTable.player_id, pid)
-        );
-
-    const last5 = await db
-      .select({
-        pts: playerStatsTable.pts,
-        fga: playerStatsTable.fga,
-        fg: playerStatsTable.fg,
-        trb: playerStatsTable.trb,
-        ast: playerStatsTable.ast,
-        stl: playerStatsTable.stl,
-        blk: playerStatsTable.blk,
-        tov: playerStatsTable.tov,
-        mp: playerStatsTable.mp,
-      })
-      .from(playerStatsTable)
-      .where(whereClause)
-      .orderBy(desc(playerStatsTable.date))
-      .limit(5);
-
-    if (last5.length === 0) continue;
-
-    const sum = last5.reduce(
-      (acc, row) => {
-        acc.pts += Number(row.pts ?? 0);
-        acc.fga += Number(row.fga ?? 0);
-        acc.fg += Number(row.fg ?? 0);
-        acc.trb += Number(row.trb ?? 0);
-        acc.ast += Number(row.ast ?? 0);
-        acc.stl += Number(row.stl ?? 0);
-        acc.blk += Number(row.blk ?? 0);
-        acc.tov += Number(row.tov ?? 0);
-        acc.mp += Number(row.mp ?? 0);
-        return acc;
-      },
-      { pts: 0, fga: 0, fg: 0, trb: 0, ast: 0, stl: 0, blk: 0, tov: 0, mp: 0 }
-    );
-
-    const n = last5.length;
-    map.set(pid, {
-      player_id: pid,
-      pts: sum.pts / n,
-      fga: sum.fga / n,
-      fg: sum.fg / n,
-      fgPct: sum.fga > 0 ? sum.fg / sum.fga : 0,
-      trb: sum.trb / n,
-      ast: sum.ast / n,
-      stl: sum.stl / n,
-      blk: sum.blk / n,
-      tov: sum.tov / n,
-      mp: sum.mp / n,
-    });
+  const byPlayer = new Map<string, typeof base>();
+  for (const g of base) {
+    if (!byPlayer.has(g.player_id)) byPlayer.set(g.player_id, [] as any);
+    byPlayer.get(g.player_id)!.push(g as any);
   }
 
-  return map;
-}
-
-function loadNameMap(): Record<string, string> {
-  try {
-    const csvPath = path.join(
-      process.cwd(),
-      "Data",
-      "wnba_player_ids_master.csv"
-    );
-    const raw = fs.readFileSync(csvPath, "utf-8");
-    const lines = raw.split(/\r?\n/).filter(Boolean);
-    if (lines.length) lines.shift(); // header
-    const map: Record<string, string> = {};
-    for (const line of lines) {
-      const [name, pid] = line.split(",");
-      if (name && pid) map[pid.trim()] = name.trim();
-    }
-    return map;
-  } catch (e) {
-    console.error("Failed to load player id map:", e);
-    return {};
-  }
-}
-
-export default async function Home({ searchParams }: { searchParams?: { team?: string; pos?: string } }) {
-  // Determine usable year/season type
-  const years = await getYearOptions();
-  const seasonTypeAll = await getSeasonTypeOptions();
-  const normalized = seasonTypeAll.map((s) => (s ?? "").trim().toLowerCase());
-  const rsIndex = normalized.findIndex((s) => s.startsWith("regular season"));
-  const preferredSeasonType = rsIndex >= 0 ? seasonTypeAll[rsIndex]! : null;
-
-  let chosenYear = years[0] ?? new Date().getFullYear();
-  let chosenSeasonType: string | null = preferredSeasonType;
-  let season = await getSeasonAverages(chosenYear, chosenSeasonType);
-  if (season.length === 0 && chosenSeasonType) {
-    chosenSeasonType = null;
-    season = await getSeasonAverages(chosenYear, chosenSeasonType);
-  }
-  
-  const selectedTeam = (searchParams?.team ?? "").toUpperCase();
-  const selectedPos = (searchParams?.pos ?? "").toUpperCase();
-
-  const teamOptions = await getTeamOptions(chosenYear, chosenSeasonType);
-  const positionOptions = await getPositionOptions(chosenYear);
-
-
-  // Filter by team if provided
-  let teamEligibleIds: string[] | null = null;
-  if (selectedTeam && teamOptions.includes(selectedTeam)) {
-    teamEligibleIds = await getTeamEligiblePlayerIds(chosenYear, chosenSeasonType, selectedTeam);
-    season = season.filter((s) => teamEligibleIds!.includes(s.player_id));
-  }
-
-  // Filter by position if provided
-  if (selectedPos) {
-    season = season.filter((s) => {
-      const pos = (idToPos[s.player_id] ?? "").toUpperCase();
-      if (!pos) return false;
-      // match exact or hybrid containing the selection (e.g., "F-G" matches "F" or "G")
-      if (pos === selectedPos) return true;
-      return pos.split("-").includes(selectedPos);
-    });
-  }
-
-  if (season.length === 0) {
-    for (const y of years.slice(1)) {
-      const attempt = await getSeasonAverages(y, preferredSeasonType);
-      if (attempt.length > 0) {
-        chosenYear = y;
-        chosenSeasonType = preferredSeasonType;
-        season = attempt;
-        break;
-      }
-      const attempt2 = await getSeasonAverages(y, null);
-      if (attempt2.length > 0) {
-        chosenYear = y;
-        chosenSeasonType = null;
-        season = attempt2;
-        break;
-      }
-    }
-  }
-
-  const last5Map = await getLast5AveragesByPlayer(
-    chosenYear,
-    season.map((s) => s.player_id),
-    chosenSeasonType
-  );
   const nameMap = loadNameMap();
+  const posMap = loadPosMap(chosenYear);
 
-  const rows = season.map((s) => {
-    const r5 = last5Map.get(s.player_id);
+  const rows: Row[] = [];
+  for (const [pid, games] of byPlayer.entries()) {
+    const sorted = [...games].sort((a,b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    const last5 = sorted.slice(-5);
 
-    const latest = r5 ?? { ...s };
-    const name = nameMap[s.player_id] ?? s.player_id;
-    const seasonPR = (s.pts ?? 0) + (10/12.5)*(s.trb ?? 0) + (10/6.5)*(s.ast ?? 0) + (10/3)*(s.stl ?? 0) + (10/3)*(s.blk ?? 0);
-    const last5PR = r5 ? ((r5.pts ?? 0) + (10/12.5)*(r5.trb ?? 0) + (10/6.5)*(r5.ast ?? 0) + (10/3)*(r5.stl ?? 0) + (10/3)*(r5.blk ?? 0)) : seasonPR;
-    const power = 0.75 * seasonPR + 0.25 * last5PR;
+    const sum = (arr: any[], k: keyof typeof games[number]) => arr.reduce((acc, x) => acc + Number((x as any)[k] ?? 0), 0);
 
-    // arrows based on ±10% vs season average; TOV inverted in client
-    function pctDeltaArrow(latest: number, season: number) {
-      if (season === 0) return "";
-      const delta = (latest - season) / season;
-      if (delta >= 0.1) return "▲";
-      if (delta <= -0.1) return "▼";
-      return "";
-    }
-    return {
-      player_id: s.player_id,
+    const mpSeason = sum(games, "mp") / Math.max(1, games.length);
+    const ptsSeason = sum(games, "pts") / Math.max(1, games.length);
+    const fgSeason = sum(games, "fg");
+    const fgaSeason = sum(games, "fga");
+    const fgPctSeason = fgaSeason > 0 ? fgSeason / fgaSeason : 0;
+    const astSeason = sum(games, "ast") / Math.max(1, games.length);
+    const stlSeason = sum(games, "stl") / Math.max(1, games.length);
+    const blkSeason = sum(games, "blk") / Math.max(1, games.length);
+    const tovSeason = sum(games, "tov") / Math.max(1, games.length);
+
+    const mp5 = sum(last5, "mp") / Math.max(1, last5.length);
+    const pts5 = sum(last5, "pts") / Math.max(1, last5.length);
+    const fg5 = sum(last5, "fg");
+    const fga5 = sum(last5, "fga");
+    const fgPct5 = fga5 > 0 ? fg5 / fga5 : 0;
+    const ast5 = sum(last5, "ast") / Math.max(1, last5.length);
+    const stl5 = sum(last5, "stl") / Math.max(1, last5.length);
+    const blk5 = sum(last5, "blk") / Math.max(1, last5.length);
+    const tov5 = sum(last5, "tov") / Math.max(1, last5.length);
+
+    const name = nameMap[pid] || pid.toUpperCase();
+    const posRaw = posMap[pid] || "";
+    const team = (sorted.at(-1)?.tm || getTeamFromPosMap(pid) || "").toUpperCase();
+    const fgPct = fgPctSeason;
+
+    const power = powerScore({ pts: ptsSeason, ast: astSeason, stl: stlSeason, blk: blkSeason, tov: tovSeason });
+
+    rows.push({
+      player_id: pid,
       name,
-      slug: (name || "")
-        .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[^a-z0-9\\s-]/g, "")
-        .trim()
-        .replace(/\\s+/g, "-")
-        .replace(/-+/g, "-"),
-      power: power,
-      pts: s.pts,
-      ptsArrow: r5 ? pctDeltaArrow(latest.pts, s.pts) : "",
-      fgPct: s.fgPct,
-      fgPctArrow: r5 ? pctDeltaArrow(latest.fgPct, s.fgPct) : "",
-      trb: s.trb,
-      trbArrow: r5 ? pctDeltaArrow(latest.trb, s.trb) : "",
-      ast: s.ast,
-      astArrow: r5 ? pctDeltaArrow(latest.ast, s.ast) : "",
-      stl: s.stl,
-      stlArrow: r5 ? pctDeltaArrow(latest.stl, s.stl) : "",
-      blk: s.blk,
-      blkArrow: r5 ? pctDeltaArrow(latest.blk, s.blk) : "",
-      tov: s.tov,
-      tovArrow: r5 ? pctDeltaArrow(latest.tov, s.tov) : "",
-      mp: s.mp,
-      mpArrow: r5 ? pctDeltaArrow(latest.mp, s.mp) : "",
-    };
-  });
-  
-  // === Power Rankings (rank numbers) ===
+      slug: slugifyName(name),
+      mp: Number(mpSeason.toFixed(3)),
+      pts: Number(ptsSeason.toFixed(3)),
+      fgPct: Number(fgPct.toFixed(5)),
+      ast: Number(astSeason.toFixed(3)),
+      stl: Number(stlSeason.toFixed(3)),
+      blk: Number(blkSeason.toFixed(3)),
+      tov: Number(tovSeason.toFixed(3)),
+      power,
+      powerRank: 0,
+      pos: mapPosToBucket(posRaw),
+      team,
+      mpArrow: arrow(mp5 - mpSeason),
+      ptsArrow: arrow(pts5 - ptsSeason),
+      fgPctArrow: arrow(fgPct5 - fgPctSeason),
+      astArrow: arrow(ast5 - astSeason),
+      stlArrow: arrow(stl5 - stlSeason),
+      blkArrow: arrow(blk5 - blkSeason),
+      tovArrow: arrow(tov5 - tovSeason),
+    });
+  }
+
+  const byPower = [...rows].sort((a, b) => b.power - a.power);
   const rankById = new Map<string, number>();
-  [...rows]
-    .sort((a, b) => (b.power ?? 0) - (a.power ?? 0))
-    .forEach((r, i) => rankById.set(r.player_id, i + 1));
-
-  const rowsWithRank = rows.map(r => ({
-    ...r,
-    powerRank: rankById.get(r.player_id) || rows.length,
-  }));
-
-const posMap = loadPositionMap(chosenYear);
-  const teamMap = loadTeamMap(chosenYear);
-
-  
-  const teamOptionsLocal = await getTeamOptions(chosenYear, chosenSeasonType);
-  const positionOptionsLocal = await getPositionOptions(chosenYear);
-const enrichedRows = rowsWithRank.map((r) => ({ ...r, pos: mapPosToBucket(posMap[r.player_id] ?? ''), team: teamMap[r.player_id] ?? '' }));
-
-
-  const debug: DebugInfo = {
-    chosenYear,
-    chosenSeasonType,
-    seasonTypeOptions: seasonTypeAll,
-    yearOptions: years,
-    rowCount: rows.length,
-  };
+  byPower.forEach((r, i) => rankById.set(r.player_id, i + 1));
+  rows.forEach((r) => (r.powerRank = rankById.get(r.player_id) || rows.length));
 
   return (
     <div className="p-8">
-      <TypographyH1>Statfluence</TypographyH1>
-      <main className="mt-8 space-y-4">
-        <div className="text-muted-foreground">
-          Current season averages
-          {debug.chosenSeasonType ? `, ${debug.chosenSeasonType}` : ""}. Arrows
-          compare last 5 games vs season average (±10%).
-        </div>
-        <PlayerStatsTable rows={enrichedRows as any} />
-        <div className="text-xs text-muted-foreground">
-          Loaded {debug.rowCount} players.
-        </div>
-      </main>
+      <div className="mb-6 text-center">
+        <Link href="/">
+          <Image src="/logo-statfluence.svg" alt="Statfluence" width={180} height={40} priority />
+        </Link>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Current season averages. Arrows compare last 5 games vs season average (PlusMinus 10%).
+      </p>
+      <PlayerStatsTable rows={rows as any} />
     </div>
   );
-}
-
-
-async function getTeamOptions(year: number, seasonType: string | null) {
-  const whereClause = seasonType
-    ? and(eq(playerStatsTable.year, year), eq(playerStatsTable.seasonType, seasonType))
-    : eq(playerStatsTable.year, year);
-
-  const rows = await db
-    .select({ tm: playerStatsTable.tm })
-    .from(playerStatsTable)
-    .where(whereClause)
-    .groupBy(playerStatsTable.tm);
-
-  return rows
-    .map((r) => r.tm)
-    .filter((v): v is string => !!v)
-    .sort();
-}
-
-function loadPositionMap(year: number): Record<string, string> {
-  const idToPos: Record<string, string> = {};
-  try {
-    const idToName = loadNameMap();
-    const csvCandidate = path.join(process.cwd(), "Data", `wnba_player_per_game_${year}.csv`);
-    if (fs.existsSync(csvCandidate)) {
-      const raw = fs.readFileSync(csvCandidate, "utf-8");
-      const lines = raw.split(/\r?\n/).filter(Boolean);
-      if (lines.length <= 1) return idToPos;
-      const header = lines.shift()!; // discard header
-      // crude CSV split by comma; the file seems simple
-      const idxPlayer = header.split(",").findIndex((h) => h.trim().toLowerCase() === "player");
-      const idxPos = header.split(",").findIndex((h) => h.trim().toLowerCase() === "pos");
-      const idxTeam = header.split(",").findIndex((h) => h.trim().toLowerCase() === "team");
-      const nameToPos = new Map<string, string>();
-      for (const line of lines) {
-        const cols = line.split(",");
-        const nm = (cols[idxPlayer] ?? "").trim();
-        const pos = (cols[idxPos] ?? "").trim();
-        // prefer the latest occurrence
-        if (nm) nameToPos.set(nm, pos);
-      }
-      for (const [id, nm] of Object.entries(idToName)) {
-        if (nameToPos.has(nm)) {
-          idToPos[id] = nameToPos.get(nm)!;
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Failed to load position map:", e);
-  }
-  return idToPos;
-}
-
-async function getTeamEligiblePlayerIds(year: number, seasonType: string | null, team: string) {
-  const whereClause = seasonType
-    ? and(eq(playerStatsTable.year, year), eq(playerStatsTable.seasonType, seasonType), eq(playerStatsTable.tm, team))
-    : and(eq(playerStatsTable.year, year), eq(playerStatsTable.tm, team));
-
-  const rows = await db
-    .select({ player_id: playerStatsTable.player_id })
-    .from(playerStatsTable)
-    .where(whereClause)
-    .groupBy(playerStatsTable.player_id);
-
-  return rows.map((r) => r.player_id).filter((v): v is string => !!v);
-}
-
-async function getPositionOptions(year: number) {
-  const csvCandidate = path.join(process.cwd(), "Data", `wnba_player_per_game_${year}.csv`);
-  if (!fs.existsSync(csvCandidate)) return [];
-  const raw = fs.readFileSync(csvCandidate, "utf-8");
-  const lines = raw.split(/\r?\n/).filter(Boolean);
-  if (lines.length <= 1) return [];
-  const header = lines.shift()!;
-  const idxPos = header.split(",").findIndex((h) => h.trim().toLowerCase() === "pos");
-  const idxPlayer = header.split(",").findIndex((h) => h.trim().toLowerCase() === "player");
-  const seen = new Set<string>();
-  for (const line of lines) {
-    const cols = line.split(",");
-    const pos = (cols[idxPos] ?? "").trim();
-    const nm = (cols[idxPlayer] ?? "").trim();
-    if (!nm) continue;
-    if (pos) seen.add(pos);
-  }
-  return Array.from(seen).sort();
-}
-
-
-function loadTeamMap(year: number): Record<string, string> {
-  const idToTeam: Record<string, string> = {};
-  try {
-    const idToName = loadNameMap();
-    const csvCandidate = path.join(process.cwd(), "Data", `wnba_player_per_game_${year}.csv`);
-    if (fs.existsSync(csvCandidate)) {
-      const raw = fs.readFileSync(csvCandidate, "utf-8");
-      const lines = raw.split(/\r?\n/).filter(Boolean);
-      if (lines.length > 1) {
-        const header = lines.shift()!;
-        const headers = header.split(",");
-        const idxPlayer = headers.findIndex((h) => h.trim().toLowerCase() === "player");
-        const idxTeam = headers.findIndex((h) => h.trim().toLowerCase() === "team");
-        const nameToTeam = new Map<string, string>();
-        for (const line of lines) {
-          const cols = line.split(",");
-          const nm = (cols[idxPlayer] ?? "").trim();
-          const tm = (cols[idxTeam] ?? "").trim();
-          if (nm) nameToTeam.set(nm, tm);
-        }
-        for (const [id, nm] of Object.entries(idToName)) {
-          if (nameToTeam.has(nm)) idToTeam[id] = nameToTeam.get(nm)!;
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Failed to load team map:", e);
-  }
-  return idToTeam;
 }
