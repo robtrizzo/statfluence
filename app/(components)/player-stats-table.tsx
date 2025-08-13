@@ -1,4 +1,3 @@
-
 "use client";
 
 const ALL_SENTINEL = "__ALL__";
@@ -12,11 +11,23 @@ const POS_GROUPS = {
 type PosBucket = keyof typeof POS_GROUPS;
 const POS_OPTIONS: PosBucket[] = ["Centers", "Forwards", "Guards"];
 
-
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Row = {
   player_id: string;
@@ -48,7 +59,13 @@ type SortDir = "asc" | "desc";
 function arrowEl(arrow?: string, invert: boolean = false) {
   if (!arrow) return null;
   const up = arrow === "▲";
-  const color = invert ? (up ? "text-red-600" : "text-green-600") : (up ? "text-green-600" : "text-red-600");
+  const color = invert
+    ? up
+      ? "text-red-600"
+      : "text-green-600"
+    : up
+    ? "text-green-600"
+    : "text-red-600";
   return <span className={color}>{arrow}</span>;
 }
 
@@ -63,7 +80,6 @@ export default function PlayerStatsTable({
   const [sortDir, setSortDir] = useState<SortDir>(defaultSort.dir);
   const [limit, setLimit] = useState<number>(15);
 
-  
   const [team, setTeam] = useState<string>("");
   const [pos, setPos] = useState<string>("");
   const teamOptions = useMemo(() => {
@@ -82,16 +98,17 @@ export default function PlayerStatsTable({
     return Array.from(s).sort();
   }, [rows]);
 
-
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       const okTeam = team ? (r.team || "").toUpperCase() === team : true;
       const posVal = (r.pos || "").toUpperCase();
-      const okPos = pos ? (posVal === pos || posVal.split("-").includes(pos)) : true;
+      const okPos = pos
+        ? posVal === pos || posVal.split("-").includes(pos)
+        : true;
       return okTeam && okPos;
     });
   }, [rows, team, pos]);
-const sorted = useMemo(() => {
+  const sorted = useMemo(() => {
     const mul = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       const av = (a as any)[sortKey] ?? 0;
@@ -117,27 +134,44 @@ const sorted = useMemo(() => {
     <div className="space-y-2">
       <div className="flex items-center gap-2 justify-end">
         <span className="text-sm text-muted-foreground">Team</span>
-        <Select value={team || ALL_SENTINEL} onValueChange={(v) => setTeam(v === ALL_SENTINEL ? "" : v)}>
-          <SelectTrigger className="w-[120px]"><SelectValue placeholder="All" /></SelectTrigger>
+        <Select
+          value={team || ALL_SENTINEL}
+          onValueChange={(v) => setTeam(v === ALL_SENTINEL ? "" : v)}
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_SENTINEL}>All</SelectItem>
             {teamOptions.map((t) => (
-              <SelectItem key={t} value={t.toUpperCase()}>{t}</SelectItem>
+              <SelectItem key={t} value={t.toUpperCase()}>
+                {t}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">Pos</span>
-        <Select value={pos || ALL_SENTINEL} onValueChange={(v) => setPos(v === ALL_SENTINEL ? "" : v)}>
-          <SelectTrigger className="w-[120px]"><SelectValue placeholder="All" /></SelectTrigger>
+        <Select
+          value={pos || ALL_SENTINEL}
+          onValueChange={(v) => setPos(v === ALL_SENTINEL ? "" : v)}
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_SENTINEL}>All</SelectItem>
             {positionOptions.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
+              <SelectItem key={p} value={p}>
+                {p}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">Show</span>
-        <Select value={String(limit)} onValueChange={(v) => setLimit(parseInt(v))}>
+        <Select
+          value={String(limit)}
+          onValueChange={(v) => setLimit(parseInt(v))}
+        >
           <SelectTrigger className="w-[100px]">
             <SelectValue />
           </SelectTrigger>
@@ -155,26 +189,61 @@ const sorted = useMemo(() => {
         <TableHeader>
           <TableRow>
             <TableHead>Player</TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("power")} className="cursor-pointer select-none">Power Rankings {sortKey === "power" ? (sortDir === "desc" ? "▼" : "▲") : ""}</TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("mp")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("power")}
+              className="cursor-pointer select-none"
+            >
+              Power Rankings{" "}
+              {sortKey === "power" ? (sortDir === "desc" ? "▼" : "▲") : ""}
+            </TableHead>
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("mp")}
+              className="cursor-pointer select-none"
+            >
               MP {sortKey === "mp" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("pts")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("pts")}
+              className="cursor-pointer select-none"
+            >
               PTS {sortKey === "pts" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("fgPct")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("fgPct")}
+              className="cursor-pointer select-none"
+            >
               FG% {sortKey === "fgPct" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("ast")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("ast")}
+              className="cursor-pointer select-none"
+            >
               AST {sortKey === "ast" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("stl")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("stl")}
+              className="cursor-pointer select-none"
+            >
               STL {sortKey === "stl" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("blk")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("blk")}
+              className="cursor-pointer select-none"
+            >
               BLK {sortKey === "blk" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
-            <TableHead role="button" onClick={() => onHeaderClick("tov")} className="cursor-pointer select-none">
+            <TableHead
+              role="button"
+              onClick={() => onHeaderClick("tov")}
+              className="cursor-pointer select-none"
+            >
               TOV {sortKey === "tov" ? (sortDir === "desc" ? "▼" : "▲") : ""}
             </TableHead>
           </TableRow>
@@ -186,13 +255,27 @@ const sorted = useMemo(() => {
                 <Link href={`/players/${r.slug}`}>{r.name}</Link>
               </TableCell>
               <TableCell>{r.powerRank}</TableCell>
-              <TableCell>{r.mp.toFixed(1)} {arrowEl(r.mpArrow)}</TableCell>
-              <TableCell>{r.pts.toFixed(1)} {arrowEl(r.ptsArrow)}</TableCell>
-              <TableCell>{(r.fgPct * 100).toFixed(1)}% {arrowEl(r.fgPctArrow)}</TableCell>
-              <TableCell>{r.ast.toFixed(1)} {arrowEl(r.astArrow)}</TableCell>
-              <TableCell>{r.stl.toFixed(1)} {arrowEl(r.stlArrow)}</TableCell>
-              <TableCell>{r.blk.toFixed(1)} {arrowEl(r.blkArrow)}</TableCell>
-              <TableCell>{r.tov.toFixed(1)} {arrowEl(r.tovArrow, true)}</TableCell>
+              <TableCell>
+                {r.mp.toFixed(1)} {arrowEl(r.mpArrow)}
+              </TableCell>
+              <TableCell>
+                {r.pts.toFixed(1)} {arrowEl(r.ptsArrow)}
+              </TableCell>
+              <TableCell>
+                {(r.fgPct * 100).toFixed(1)}% {arrowEl(r.fgPctArrow)}
+              </TableCell>
+              <TableCell>
+                {r.ast.toFixed(1)} {arrowEl(r.astArrow)}
+              </TableCell>
+              <TableCell>
+                {r.stl.toFixed(1)} {arrowEl(r.stlArrow)}
+              </TableCell>
+              <TableCell>
+                {r.blk.toFixed(1)} {arrowEl(r.blkArrow)}
+              </TableCell>
+              <TableCell>
+                {r.tov.toFixed(1)} {arrowEl(r.tovArrow, true)}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

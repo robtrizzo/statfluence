@@ -1,5 +1,5 @@
 import { playerStatsTable } from "@/db/schema";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, lte, asc, inArray, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { Stat } from "@/types/stat";
 
@@ -11,6 +11,162 @@ export async function getAllPlayerStats(limit?: number, offset?: number) {
     .limit(limit ?? 10);
 
   return stats;
+}
+
+export async function getPlayerNamesByYear(
+  year: number,
+  limit?: number,
+  offset?: number
+) {
+  const uniquePlayerNames = await db
+    .selectDistinct({ name: playerStatsTable.name })
+    .from(playerStatsTable)
+    .where(eq(playerStatsTable.year, year))
+    .orderBy(asc(playerStatsTable.name))
+    .offset(offset ?? 0)
+    .limit(limit ?? 10);
+
+  const filteredUniquePlayerNames: string[] = uniquePlayerNames
+    .map((obj) => obj.name)
+    .filter((name): name is string => name !== null);
+
+  return filteredUniquePlayerNames;
+}
+
+type PlayerStat = {
+  mp: number | null;
+  pts: number | null;
+  fg: number | null;
+  fga: number | null;
+  trb: number | null;
+  ast: number | null;
+  stl: number | null;
+  blk: number | null;
+  tov: number | null;
+  date?: string | null;
+  playerId?: string | null;
+  name?: string | null;
+  team?: string | null;
+  pos?: string | null;
+  power?: number | null;
+  powerRank?: number | null;
+};
+
+export async function getAllCurrentSeasonStatsForPlayers(
+  year: number,
+  playerNames: string[]
+) {
+  // get all stats for these player names
+  const currentSeasonStats = await db
+    .select({
+      mp: playerStatsTable.mp,
+      pts: playerStatsTable.pts,
+      fg: playerStatsTable.fg,
+      fga: playerStatsTable.fga,
+      trb: playerStatsTable.trb,
+      ast: playerStatsTable.ast,
+      stl: playerStatsTable.stl,
+      blk: playerStatsTable.blk,
+      tov: playerStatsTable.tov,
+      date: playerStatsTable.date,
+      player_id: playerStatsTable.player_id,
+      name: playerStatsTable.name,
+      team: playerStatsTable.team,
+      pos: playerStatsTable.pos,
+    })
+    .from(playerStatsTable)
+    .where(
+      and(
+        eq(playerStatsTable.year, year),
+        inArray(playerStatsTable.name, playerNames)
+      )
+    )
+    .orderBy(desc(playerStatsTable.date));
+
+  return currentSeasonStats;
+}
+
+export async function getAllCurrentSeasonTrajectoryStats(
+  limit?: number,
+  offset?: number
+) {
+  // get current year
+  const currentYear = new Date().getFullYear();
+  // get limit,offset player names for this season
+  // TODO later this isn't necessary, we'll go off of power ranking
+  const playerNames = await getPlayerNamesByYear(currentYear, limit, offset);
+  // get all stats for these players and this season
+  const allCurrentSeasonStats = await getAllCurrentSeasonStatsForPlayers(
+    currentYear,
+    playerNames
+  );
+  // construct a map by player name which will have an array of the last 5 games they played in
+  const playerGameMaps = new Map<string, PlayerStat[]>();
+
+  allCurrentSeasonStats.forEach((stat) => {
+    if (!playerGameMaps.has(stat.name || "Unknown")) {
+      playerGameMaps.set(stat.name || "Unknown", []);
+    }
+    playerGameMaps.get(stat.name || "Unknown")?.push(stat);
+  });
+
+  const playerGameMapsLast5 = new Map<string, PlayerStat[]>();
+
+  // limit each player's games to the last 5
+  playerGameMaps.forEach((games, playerName) => {
+    playerGameMapsLast5.set(playerName, games.slice(0, 5));
+  });
+
+  const playerStatAverages = new Map<string, Stat[]>();
+
+  playerGameMaps.forEach((games, playerName) => {
+    const averages = getPlayerStatsAverages(games);
+    playerStatAverages.set(playerName, averages);
+  });
+
+  const MARGIN = 0.1; // 10% margin to consider stable
+
+  // for each of the player stat averages, compare them to the average of
+  // their last five games
+  playerStatAverages.forEach((averages, playerName) => {
+    const lastFiveAverages = getPlayerStatsAverages(
+      playerGameMapsLast5.get(playerName) || []
+    );
+    // Compare averages
+    for (let i = 0; i < averages.length; i++) {
+      const current = averages[i];
+      const lastFive = lastFiveAverages[i];
+      if (current && lastFive) {
+        // Compare the current average to the last five games average
+        // if the stat type is basic, we need to compute a % difference
+        // and compare to margin
+        if (current.type === "basic" && lastFive.type === "basic") {
+          const diff =
+            Math.abs(current.value - lastFive.value) / lastFive.value;
+          if (diff > MARGIN) {
+            current.trend = current.value > lastFive.value ? "up" : "down";
+            current.color = current.value > lastFive.value ? "green" : "red";
+          }
+        } else if (
+          current.type === "percentage" &&
+          lastFive.type === "percentage"
+        ) {
+          // directly compare percentages
+          const diff = Math.abs(current.value - lastFive.value);
+          if (diff > MARGIN) {
+            current.trend = current.value > lastFive.value ? "up" : "down";
+            current.color = current.value > lastFive.value ? "green" : "red";
+          }
+        }
+      }
+    }
+  });
+
+  // TODO next time
+  // transform this into an array w/ player name, player_id, pos, team, stats
+  // this is of type PlayerTableRow
+
+  return playerStatAverages;
 }
 
 export async function getPlayerStatsById(
@@ -127,19 +283,7 @@ export async function getPastSeasonsPlayerSummary(
   return summary;
 }
 
-function getPlayerStatsAverages(
-  stats: {
-    mp: number | null;
-    pts: number | null;
-    fg: number | null;
-    fga: number | null;
-    trb: number | null;
-    ast: number | null;
-    stl: number | null;
-    blk: number | null;
-    tov: number | null;
-  }[]
-) {
+function getPlayerStatsAverages(stats: PlayerStat[]) {
   const summary: Stat[] = [
     {
       name: "Average Minutes Played",

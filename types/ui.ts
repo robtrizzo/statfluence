@@ -11,3 +11,13 @@ export type Stat = {
   trend?: "up" | "down" | "stable";
   color?: string;
 };
+
+export type PlayerTableRow = {
+  player_id: string;
+  name: string;
+  stats: Stat[];
+  // power: number;
+  // powerRank: number;
+  pos?: string;
+  team?: string;
+};

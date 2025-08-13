@@ -1,5 +1,8 @@
 export type PlayerStat = {
   id: number;
+  name: string;
+  pos: string;
+  team: string;
   rk: number | null;
   date: string | null;
   age: string | null;
