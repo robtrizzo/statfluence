@@ -3,6 +3,9 @@ import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 export const playerStatsTable = sqliteTable("player_stats", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   player_id: text("player_id"),
+  name: text("name"),
+  pos: text("pos"),
+  team: text("team"),
   year: integer("year"),
   rk: integer("rk"),
   date: text("date"),

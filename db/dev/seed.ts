@@ -8,6 +8,58 @@ import { Client } from "@libsql/client";
 // Load environment variables from the project root
 config({ path: path.resolve(process.cwd(), ".env") });
 
+function createPlayerIDNameMap() {
+  const csvPath = path.join(
+    process.cwd(),
+    "Data",
+    "wnba_player_ids_master.csv"
+  );
+  if (!fs.existsSync(csvPath)) {
+    throw new Error(`CSV file not found: ${csvPath}`);
+  }
+
+  const fileContent = fs.readFileSync(csvPath, "utf-8");
+  const lines = fileContent.split("\n").slice(1);
+
+  const playerIDNameMap = new Map<string, string>();
+  for (const line of lines) {
+    if (!line.trim()) continue; // Skip empty lines
+
+    const [playerId, name] = line.split(",");
+    playerIDNameMap.set(playerId, name);
+  }
+
+  return playerIDNameMap;
+}
+
+const PLAYER_NAMES_BY_ID = createPlayerIDNameMap();
+
+function createPlayerNamePosTeamMap() {
+  const csvPath = path.join(
+    process.cwd(),
+    "Data",
+    "wnba_player_per_game_2025.csv"
+  );
+  if (!fs.existsSync(csvPath)) {
+    throw new Error(`CSV file not found: ${csvPath}`);
+  }
+
+  const fileContent = fs.readFileSync(csvPath, "utf-8");
+  const lines = fileContent.split("\n").slice(1);
+
+  const playerNamePosTeamMap = new Map<string, { team: string; pos: string }>();
+  for (const line of lines) {
+    if (!line.trim()) continue; // Skip empty lines
+
+    const [name, team, pos] = line.split(",");
+    playerNamePosTeamMap.set(name, { team, pos });
+  }
+
+  return playerNamePosTeamMap;
+}
+
+const PLAYER_POS_TEAM_BY_NAME = createPlayerNamePosTeamMap();
+
 async function seedPlayerStats() {
   // take a command line flag of --test
   const isTest = process.argv[2] === "test";
@@ -71,6 +123,11 @@ async function seedPlayerStatsFile(
   }
 
   const playerId = fileNameParts[0];
+  const name = PLAYER_NAMES_BY_ID.get(playerId) || "Unknown";
+  const { team, pos } = PLAYER_POS_TEAM_BY_NAME.get(name) || {
+    team: "Unknown",
+    pos: "Unknown",
+  };
   const year = parseInt(fileNameParts[3], 10);
 
   // ignore the first line (header)
@@ -121,6 +178,9 @@ async function seedPlayerStatsFile(
     rows.push({
       rk: parseInt(rk, 10),
       player_id: playerId,
+      name,
+      team,
+      pos,
       year,
       date,
       age,
