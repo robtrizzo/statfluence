@@ -28,30 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-type Row = {
-  player_id: string;
-  name: string;
-  slug: string;
-  mp: number;
-  pts: number;
-  fgPct: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  tov: number;
-  power: number;
-  powerRank: number;
-  pos?: string;
-  team?: string;
-  mpArrow?: string;
-  ptsArrow?: string;
-  fgPctArrow?: string;
-  astArrow?: string;
-  stlArrow?: string;
-  blkArrow?: string;
-  tovArrow?: string;
-};
+import { PlayerTableRow } from "@/types/ui";
 
 type SortKey = "power" | "mp" | "pts" | "fgPct" | "ast" | "stl" | "blk" | "tov";
 type SortDir = "asc" | "desc";
@@ -73,7 +50,7 @@ export default function PlayerStatsTable({
   rows,
   defaultSort = { key: "power", dir: "desc" as SortDir },
 }: {
-  rows: Row[];
+  rows: PlayerTableRow[];
   defaultSort?: { key: SortKey; dir: SortDir };
 }) {
   const [sortKey, setSortKey] = useState<SortKey>(defaultSort.key);
