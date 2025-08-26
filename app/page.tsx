@@ -1,12 +1,11 @@
-import PlayerStatsTable from "./(components)/player-stats-table";
 import Link from "next/link";
 import Image from "next/image";
 import { PlayerTableRow } from "@/types/ui";
 import { getAllCurrentSeasonTrajectoryStats } from "@/handlers/player_stats";
+import { DataTable } from "@/components/ui/player-stats/player-stats-table";
+import { playerStatColumns } from "@/components/ui/player-stats/columns";
 
 export default async function Home() {
-  // TODO ignore the error - this is intentional to remind us to fix
-  // the handler to shape the data into a PlayerTableRow[]
   const rows = (await getAllCurrentSeasonTrajectoryStats()) as PlayerTableRow[];
 
   return (
@@ -26,7 +25,7 @@ export default async function Home() {
         Current season averages. Arrows compare last 5 games vs season average
         (PlusMinus 10%).
       </p>
-      <PlayerStatsTable rows={rows} />
+      <DataTable columns={playerStatColumns} data={rows} />
     </div>
   );
 }

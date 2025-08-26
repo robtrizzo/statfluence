@@ -2,14 +2,14 @@
 
 const ALL_SENTINEL = "__ALL__";
 
-const POS_GROUPS = {
-  Centers: new Set<string>(["C", "C-F", "F-C"]),
-  Forwards: new Set<string>(["F", "C-F", "F-C", "F-G", "G-F"]),
-  Guards: new Set<string>(["G", "F-G", "G-F"]),
-} as const;
+// const POS_GROUPS = {
+//   Centers: new Set<string>(["C", "C-F", "F-C"]),
+//   Forwards: new Set<string>(["F", "C-F", "F-C", "F-G", "G-F"]),
+//   Guards: new Set<string>(["G", "F-G", "G-F"]),
+// } as const;
 
-type PosBucket = keyof typeof POS_GROUPS;
-const POS_OPTIONS: PosBucket[] = ["Centers", "Forwards", "Guards"];
+// type PosBucket = keyof typeof POS_GROUPS;
+// const POS_OPTIONS: PosBucket[] = ["Centers", "Forwards", "Guards"];
 
 import { useMemo, useState } from "react";
 import Link from "next/link";

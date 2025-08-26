@@ -2,6 +2,7 @@ import { playerStatsTable } from "@/db/schema";
 import { and, eq, gte, lte, asc, inArray, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { Stat } from "@/types/stat";
+import { PlayerTableRow } from "@/types/ui";
 
 export async function getAllPlayerStats(limit?: number, offset?: number) {
   const stats = await db
@@ -89,7 +90,7 @@ export async function getAllCurrentSeasonStatsForPlayers(
 export async function getAllCurrentSeasonTrajectoryStats(
   limit?: number,
   offset?: number
-) {
+): Promise<PlayerTableRow[]> {
   // get current year
   const currentYear = new Date().getFullYear();
   // get limit,offset player names for this season
@@ -162,11 +163,24 @@ export async function getAllCurrentSeasonTrajectoryStats(
     }
   });
 
-  // TODO next time
-  // transform this into an array w/ player name, player_id, pos, team, stats
-  // this is of type PlayerTableRow
+  const playerTableRows: PlayerTableRow[] = [];
 
-  return playerStatAverages;
+  playerStatAverages.forEach((averages, playerName) => {
+    const playerGames = playerGameMapsLast5.get(playerName) || [];
+    if (playerGames.length === 0) return;
+
+    const { playerId, team, pos } = playerGames[0]; // Assuming all games have the same player info
+
+    playerTableRows.push({
+      player_id: playerId || "Unknown",
+      name: playerName,
+      team: team || "Unknown",
+      pos: pos || "Unknown",
+      stats: averages,
+    });
+  });
+
+  return playerTableRows;
 }
 
 export async function getPlayerStatsById(

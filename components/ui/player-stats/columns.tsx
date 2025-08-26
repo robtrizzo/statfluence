@@ -12,17 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { PlayerStat, playerStatHeaders } from "@/types/playerStat";
 import { DataTableColumnHeader } from "../data-table-column-header";
+import { PlayerTableRow, playerTableStatHeaders } from "@/types/ui";
 
-const standardStatColumns = playerStatHeaders.map((h) => ({
-  accessorKey: h,
-  header: ({ column }: { column: Column<PlayerStat, unknown> }) => (
-    <DataTableColumnHeader column={column} title={h} />
+const playerTableStatColumns = playerTableStatHeaders.map((stat) => ({
+  accessorKey: stat.key,
+  header: ({ column }: { column: Column<PlayerTableRow, unknown> }) => (
+    <DataTableColumnHeader column={column} title={stat.title} />
   ),
 }));
 
-export const columns: ColumnDef<PlayerStat>[] = [
+export const playerStatColumns: ColumnDef<PlayerTableRow>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -45,7 +45,7 @@ export const columns: ColumnDef<PlayerStat>[] = [
     enableSorting: false,
     enableHiding: false,
   },
-  ...standardStatColumns,
+  ...playerTableStatColumns,
   {
     id: "actions",
     cell: ({ row }) => {
@@ -63,17 +63,16 @@ export const columns: ColumnDef<PlayerStat>[] = [
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
-                const rk = playerStat.rk?.toString();
-                if (rk) {
-                  navigator.clipboard.writeText(rk);
-                }
+                // const rk = playerStat.rk?.toString();
+                // if (rk) {
+                //   navigator.clipboard.writeText(rk);
+                // }
               }}
             >
               Copy Rk
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>View player</DropdownMenuItem>
-            {/* <DropdownMenuItem>View payment details</DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
       );
