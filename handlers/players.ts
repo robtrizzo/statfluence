@@ -36,7 +36,6 @@ export const getPlayerIds = unstable_cache(
   }
 );
 
-
 import fs from "fs";
 import path from "path";
 import { eq } from "drizzle-orm";
@@ -46,7 +45,11 @@ type PlayerEntry = { id: string; name: string };
 function loadIdToNameMap(): Record<string, string> {
   const idToName: Record<string, string> = {};
   try {
-    const csvPath = path.join(process.cwd(), "Data", "wnba_player_ids_master.csv");
+    const csvPath = path.join(
+      process.cwd(),
+      "Data",
+      "wnba_player_ids_master.csv"
+    );
     const raw = fs.readFileSync(csvPath, "utf-8");
     const lines = raw.split(/\r?\n/).filter(Boolean);
     if (lines.length) lines.shift(); // drop header
@@ -81,10 +84,28 @@ export const getPlayersForYearWithNames = unstable_cache(
     return entries;
   },
   // Cache key includes the target year
-  [(typeof process !== "undefined" ? process.env.NODE_ENV : "prod") === "development" ? `dev-players-${new Date().toISOString()}` : "players-by-year-2025"],
+  [
+    (typeof process !== "undefined" ? process.env.NODE_ENV : "prod") ===
+    "development"
+      ? `dev-players-${new Date().toISOString()}`
+      : "players-by-year-2025",
+  ],
   {
     // Revalidate daily; underlying stats might update frequently
     revalidate: 60 * 60 * 24,
     tags: ["players-by-year"],
   }
+);
+
+export const getPlayerNameFromId = unstable_cache(
+  async (playerId: string) => {
+    const rows = await db
+      .select({ name: playerStatsTable.name })
+      .from(playerStatsTable)
+      .where(eq(playerStatsTable.player_id, playerId))
+      .limit(1);
+    return rows[0]?.name ?? "Unknown Player";
+  },
+  [],
+  {}
 );
