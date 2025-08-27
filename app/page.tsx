@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { PlayerTableRow } from "@/types/ui";
 import { getAllCurrentSeasonTrajectoryStats } from "@/handlers/player_stats";
-import { DataTable } from "@/components/ui/player-stats/player-stats-table";
+import { PlayerStatsTable } from "@/components/ui/player-stats/player-stats-table";
 import { playerStatColumns } from "@/components/ui/player-stats/columns";
 
 export default async function Home() {
@@ -25,7 +25,7 @@ export default async function Home() {
         Current season averages. Arrows compare last 5 games vs season average
         (PlusMinus 10%).
       </p>
-      <DataTable columns={playerStatColumns} data={rows} />
+      <PlayerStatsTable columns={playerStatColumns} data={rows} />
     </div>
   );
 }
