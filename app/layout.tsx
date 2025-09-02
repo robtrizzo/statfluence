@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import PlayerSearch from "./(components)/player-search";
-import "@/app/(polyfills)/entries-safe";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,19 +30,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased relative`}
       >
         <div className="p-4">
-  <PlayerSearch />
-  <div className="mt-4">
-    <Link
-      href="/team-summary"
-      className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium shadow-sm hover:shadow transition"
-      aria-label="View Team Summary"
-    >
-      Team Summary
-    </Link>
-  </div>
-</div>
-{children}
-
+          <PlayerSearch />
+          <div className="mt-4">
+            <Link
+              href="/team-summary"
+              className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium shadow-sm hover:shadow transition"
+              aria-label="View Team Summary"
+            >
+              Team Summary
+            </Link>
+          </div>
+        </div>
+        {children}
       </body>
     </html>
   );
