@@ -45,7 +45,7 @@ type PlayerStat = {
   blk: number | null;
   tov: number | null;
   date?: string | null;
-  playerId?: string | null;
+  player_id?: string | null;
   name?: string | null;
   team?: string | null;
   pos?: string | null;
@@ -169,10 +169,11 @@ export async function getAllCurrentSeasonTrajectoryStats(
     const playerGames = playerGameMapsLast5.get(playerName) || [];
     if (playerGames.length === 0) return;
 
-    const { playerId, team, pos } = playerGames[0]; // Assuming all games have the same player info
+    // console.log(`PlayerGames[0]: ${JSON.stringify(playerGames[0])}`);
+    const { player_id, team, pos } = playerGames[0]; // Assuming all games have the same player info
 
     playerTableRows.push({
-      player_id: playerId || "Unknown",
+      player_id: player_id || "Unknown",
       name: playerName,
       team: team || "Unknown",
       pos: pos || "Unknown",
