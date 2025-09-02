@@ -24,8 +24,7 @@ function createPlayerIDNameMap() {
   const playerIDNameMap = new Map<string, string>();
   for (const line of lines) {
     if (!line.trim()) continue; // Skip empty lines
-
-    const [playerId, name] = line.split(",");
+    const [name, playerId] = line.replace(/\r/g, "").split(",");
     playerIDNameMap.set(playerId, name);
   }
 
@@ -50,7 +49,6 @@ function createPlayerNamePosTeamMap() {
   const playerNamePosTeamMap = new Map<string, { team: string; pos: string }>();
   for (const line of lines) {
     if (!line.trim()) continue; // Skip empty lines
-
     const [name, team, pos] = line.split(",");
     playerNamePosTeamMap.set(name, { team, pos });
   }
