@@ -2,7 +2,7 @@ import { playerStatsTable } from "@/db/schema";
 import { and, eq, gte, lte, asc, inArray, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { Stat } from "@/types/stat";
-import { PlayerTableRow } from "@/types/ui";
+import { PlayerStats, PlayerTableRow } from "@/types/ui";
 
 export async function getAllPlayerStats(limit?: number, offset?: number) {
   const stats = await db
@@ -163,7 +163,7 @@ export async function getAllCurrentSeasonTrajectoryStats(
     }
   });
 
-  const playerTableRows: PlayerTableRow[] = [];
+  const playerStats: PlayerStats[] = [];
 
   playerStatAverages.forEach((averages, playerName) => {
     const playerGames = playerGameMapsLast5.get(playerName) || [];
@@ -172,7 +172,7 @@ export async function getAllCurrentSeasonTrajectoryStats(
     // console.log(`PlayerGames[0]: ${JSON.stringify(playerGames[0])}`);
     const { player_id, team, pos } = playerGames[0]; // Assuming all games have the same player info
 
-    playerTableRows.push({
+    playerStats.push({
       player_id: player_id || "Unknown",
       name: playerName,
       team: team || "Unknown",
@@ -181,7 +181,28 @@ export async function getAllCurrentSeasonTrajectoryStats(
     });
   });
 
-  return playerTableRows;
+  // map playerStats to PlayerTableRow
+  const playerStatsTableRows: PlayerTableRow[] = playerStats.map((ps) => {
+    const statsMap = new Map(ps.stats.map((stat) => [stat.name, stat.value]));
+    return {
+      player_id: ps.player_id,
+      name: ps.name,
+      team: ps.team,
+      pos: ps.pos,
+      mp: statsMap.get("Average Minutes Played") || 0,
+      pts: statsMap.get("Average Points") || 0,
+      fg: Math.round((statsMap.get("Field Goal %") || 0) * 1000) / 1000, // round to 3 decimal places
+      trb: statsMap.get("Average Total Rebounds") || 0,
+      ast: statsMap.get("Average Assists") || 0,
+      stl: statsMap.get("Average Steals") || 0,
+      blk: statsMap.get("Average Blocks") || 0,
+      tov: statsMap.get("Average Turnovers") || 0,
+      power: 0, // placeholder for future use
+      powerRank: 0, // placeholder for future use
+    };
+  });
+
+  return playerStatsTableRows;
 }
 
 export async function getPlayerStatsById(

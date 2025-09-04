@@ -16,7 +16,6 @@ export const playerTableStatHeaders = [
   { key: "mp", title: "Minutes Played" },
   { key: "pts", title: "Points" },
   { key: "fg", title: "Field Goals Made" },
-  { key: "fga", title: "Field Goals Attempted" },
   { key: "trb", title: "Total Rebounds" },
   { key: "ast", title: "Assists" },
   { key: "stl", title: "Steals" },
@@ -26,12 +25,27 @@ export const playerTableStatHeaders = [
   { key: "powerRank", title: "Power Rank" },
 ];
 
-export type PlayerTableRow = {
+export type PlayerStats = {
   player_id: string;
   name: string;
   stats: Stat[];
-  // power: number;
-  // powerRank: number;
+  pos?: string;
+  team?: string;
+};
+
+export type PlayerTableRow = {
+  player_id: string;
+  name: string;
+  mp: number;
+  pts: number;
+  fg: number;
+  trb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  power: number;
+  powerRank: number;
   pos?: string;
   team?: string;
 };

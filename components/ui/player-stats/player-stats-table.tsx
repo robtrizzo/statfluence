@@ -67,7 +67,8 @@ export function PlayerStatsTable<TData, TValue>({
   return (
     <div>
       <div className="flex items-center py-4">
-        <Input
+        {/* TODO come back and fix this */}
+        {/* <Input
           placeholder="Filter season type..."
           value={
             (table.getColumn("seasonType")?.getFilterValue() as string) ?? ""
@@ -76,7 +77,7 @@ export function PlayerStatsTable<TData, TValue>({
             table.getColumn("SeasonType")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
-        />
+        /> */}
         <DataTableColumnToggle table={table} />
       </div>
       <div className="overflow-hidden rounded-md border">

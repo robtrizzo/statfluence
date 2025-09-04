@@ -45,6 +45,30 @@ export const playerStatColumns: ColumnDef<PlayerTableRow>[] = [
     enableSorting: false,
     enableHiding: false,
   },
+  {
+    accessorKey: "player_id",
+    header: ({ column }: { column: Column<PlayerTableRow, unknown> }) => (
+      <DataTableColumnHeader column={column} title="Player ID" />
+    ),
+  },
+  {
+    accessorKey: "name",
+    header: ({ column }: { column: Column<PlayerTableRow, unknown> }) => (
+      <DataTableColumnHeader column={column} title="Name" />
+    ),
+  },
+  {
+    accessorKey: "team",
+    header: ({ column }: { column: Column<PlayerTableRow, unknown> }) => (
+      <DataTableColumnHeader column={column} title="Team" />
+    ),
+  },
+  {
+    accessorKey: "pos",
+    header: ({ column }: { column: Column<PlayerTableRow, unknown> }) => (
+      <DataTableColumnHeader column={column} title="Position" />
+    ),
+  },
   ...playerTableStatColumns,
   {
     id: "actions",

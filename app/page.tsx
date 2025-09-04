@@ -8,6 +8,8 @@ import { playerStatColumns } from "@/components/ui/player-stats/columns";
 export default async function Home() {
   const rows = (await getAllCurrentSeasonTrajectoryStats()) as PlayerTableRow[];
 
+  console.log("rows", rows);
+
   return (
     <div className="p-8">
       <div className="mb-6 text-center">
