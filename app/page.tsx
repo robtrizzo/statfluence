@@ -1,15 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { PlayerTableRow } from "@/types/ui";
-import { getAllCurrentSeasonTrajectoryStats } from "@/handlers/player_stats";
-import { PlayerStatsTable } from "@/components/ui/player-stats/player-stats-table";
-import { playerStatColumns } from "@/components/ui/player-stats/columns";
+import {
+  getAllCurrentSeasonTrajectoryStats,
+  getTotalPlayerCount,
+} from "@/handlers/player_stats";
+import PlayerStats from "@/components/ui/player-stats/player-stats";
 
 export default async function Home() {
   const rows = (await getAllCurrentSeasonTrajectoryStats()) as PlayerTableRow[];
-
-  console.log("rows", rows);
-
+  const totalCount = await getTotalPlayerCount();
+  console.log("total count", totalCount);
   return (
     <div className="p-8">
       <div className="mb-6 text-center">
@@ -27,7 +28,7 @@ export default async function Home() {
         Current season averages. Arrows compare last 5 games vs season average
         (PlusMinus 10%).
       </p>
-      <PlayerStatsTable columns={playerStatColumns} data={rows} />
+      <PlayerStats initialData={rows} totalCount={totalCount} />
     </div>
   );
 }

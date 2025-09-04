@@ -431,3 +431,10 @@ function getPlayerStatsAverages(stats: PlayerStat[]) {
   summary[2].value = fga > 0 ? Number((fg / fga).toFixed(3)) : 0;
   return summary;
 }
+
+export async function getTotalPlayerCount() {
+  const result = await db
+    .selectDistinct({ player_id: playerStatsTable.player_id })
+    .from(playerStatsTable);
+  return result.length;
+}
