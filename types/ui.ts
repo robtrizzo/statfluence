@@ -36,16 +36,16 @@ export type PlayerStats = {
 export type PlayerTableRow = {
   player_id: string;
   name: string;
-  mp: number;
-  pts: number;
-  fg: number;
-  trb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  tov: number;
-  power: number;
-  powerRank: number;
+  mp: Stat;
+  pts: Stat;
+  fg: Stat;
+  trb: Stat;
+  ast: Stat;
+  stl: Stat;
+  blk: Stat;
+  tov: Stat;
+  power: Stat;
+  powerRank: Stat;
   pos?: string;
   team?: string;
 };

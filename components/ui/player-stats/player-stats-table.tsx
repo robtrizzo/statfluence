@@ -27,6 +27,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { DataTablePagination } from "../data-table-pagination";
 import { DataTableColumnToggle } from "../data-table-column-toggle";
+import { Stat } from "@/types/ui";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -63,6 +65,10 @@ export function PlayerStatsTable<TData, TValue>({
       rowSelection,
     },
   });
+
+  function isStatObject(value: string | Stat): value is Stat {
+    return typeof value === "object" && value !== null && "name" in value;
+  }
 
   return (
     <div>
@@ -107,14 +113,52 @@ export function PlayerStatsTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const cellValue = cell.getValue();
+
+                    return (
+                      <TableCell key={cell.id}>
+                        {isStatObject(cellValue as string | Stat)
+                          ? // Custom render for Stat objects
+                            (() => {
+                              const statValue = cellValue as Stat;
+                              return (
+                                <div className="flex gap-1 items-center">
+                                  <span
+                                    className={`text-sm ${
+                                      statValue.color
+                                        ? `text-${statValue.color}-500`
+                                        : ""
+                                    }`}
+                                  >
+                                    {statValue.value}
+                                  </span>
+                                  {statValue.trend && (
+                                    <span
+                                      className={`text-xs ${
+                                        statValue.trend === "up"
+                                          ? "text-green-500"
+                                          : "text-red-500"
+                                      }`}
+                                    >
+                                      {statValue.trend === "up" ? (
+                                        <TrendingUp size={14} />
+                                      ) : (
+                                        <TrendingDown size={14} />
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          : // Default render for simple values
+                            flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (

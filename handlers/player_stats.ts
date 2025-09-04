@@ -183,22 +183,62 @@ export async function getAllCurrentSeasonTrajectoryStats(
 
   // map playerStats to PlayerTableRow
   const playerStatsTableRows: PlayerTableRow[] = playerStats.map((ps) => {
-    const statsMap = new Map(ps.stats.map((stat) => [stat.name, stat.value]));
+    const statMap = new Map(ps.stats.map((stat) => [stat.name, stat]));
     return {
       player_id: ps.player_id,
       name: ps.name,
       team: ps.team,
       pos: ps.pos,
-      mp: statsMap.get("Average Minutes Played") || 0,
-      pts: statsMap.get("Average Points") || 0,
-      fg: Math.round((statsMap.get("Field Goal %") || 0) * 1000) / 1000, // round to 3 decimal places
-      trb: statsMap.get("Average Total Rebounds") || 0,
-      ast: statsMap.get("Average Assists") || 0,
-      stl: statsMap.get("Average Steals") || 0,
-      blk: statsMap.get("Average Blocks") || 0,
-      tov: statsMap.get("Average Turnovers") || 0,
-      power: 0, // placeholder for future use
-      powerRank: 0, // placeholder for future use
+      mp: statMap.get("Average Minutes Played") || {
+        name: "Average Minutes Played",
+        value: 0,
+        type: "basic",
+      },
+      pts: statMap.get("Average Points") || {
+        name: "Average Points",
+        value: 0,
+        type: "basic",
+      },
+      fg: statMap.get("Field Goal %") || {
+        name: "Field Goal %",
+        value: 0,
+        type: "percentage",
+      },
+      trb: statMap.get("Average Total Rebounds") || {
+        name: "Average Total Rebounds",
+        value: 0,
+        type: "basic",
+      },
+      ast: statMap.get("Average Assists") || {
+        name: "Average Assists",
+        value: 0,
+        type: "basic",
+      },
+      stl: statMap.get("Average Steals") || {
+        name: "Average Steals",
+        value: 0,
+        type: "basic",
+      },
+      blk: statMap.get("Average Blocks") || {
+        name: "Average Blocks",
+        value: 0,
+        type: "basic",
+      },
+      tov: statMap.get("Average Turnovers") || {
+        name: "Average Turnovers",
+        value: 0,
+        type: "basic",
+      },
+      power: statMap.get("Power") || {
+        name: "Power",
+        value: 0,
+        type: "basic",
+      },
+      powerRank: statMap.get("Power Rank") || {
+        name: "Power Rank",
+        value: 0,
+        type: "basic",
+      },
     };
   });
 
