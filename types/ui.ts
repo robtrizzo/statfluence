@@ -13,6 +13,7 @@ export type Stat = {
 };
 
 export const playerTableStatHeaders = [
+  // { key: "powerRank", title: "Power Rank" },
   { key: "mp", title: "Minutes Played" },
   { key: "pts", title: "Points" },
   { key: "fg", title: "Field Goals Made" },
@@ -21,8 +22,7 @@ export const playerTableStatHeaders = [
   { key: "stl", title: "Steals" },
   { key: "blk", title: "Blocks" },
   { key: "tov", title: "Turnovers" },
-  { key: "power", title: "Power" },
-  { key: "powerRank", title: "Power Rank" },
+  // { key: "power", title: "Power" },
 ];
 
 export type PlayerStats = {

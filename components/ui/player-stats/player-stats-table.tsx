@@ -29,6 +29,7 @@ import { DataTablePagination } from "../data-table-pagination";
 import { DataTableColumnToggle } from "../data-table-column-toggle";
 import { Stat } from "@/types/ui";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -73,7 +74,9 @@ export function PlayerStatsTable<TData, TValue>({
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
+      columnVisibility: {
+        player_id: false,
+      },
       rowSelection,
       pagination: {
         pageIndex: currentPage - 1,
@@ -88,7 +91,7 @@ export function PlayerStatsTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center py-4">
+      <div className="flex items-center">
         {/* TODO come back and fix this */}
         {/* <Input
           placeholder="Filter season type..."
@@ -139,7 +142,7 @@ export function PlayerStatsTable<TData, TValue>({
                             (() => {
                               const statValue = cellValue as Stat;
                               return (
-                                <div className="flex gap-1 items-center">
+                                <div className="flex gap-1 items-center text-center">
                                   <span
                                     className={`text-sm ${
                                       statValue.color
@@ -147,7 +150,9 @@ export function PlayerStatsTable<TData, TValue>({
                                         : ""
                                     }`}
                                   >
-                                    {statValue.value}
+                                    {statValue.type === "percentage"
+                                      ? `${(statValue.value * 100).toFixed(1)}%`
+                                      : statValue.value}
                                   </span>
                                   {statValue.trend && (
                                     <span
@@ -167,11 +172,19 @@ export function PlayerStatsTable<TData, TValue>({
                                 </div>
                               );
                             })()
-                          : // Default render for simple values
-                            flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
+                          : (() => {
+                              console.log(JSON.stringify(row.getAllCells()));
+                              return cell.column.id === "name" ? (
+                                <Link
+                                  href={`/players/${row.getValue("player_id")}`}
+                                  className="hover:underline"
+                                >
+                                  {cellValue as string}
+                                </Link>
+                              ) : (
+                                <div>{cellValue as string}</div>
+                              );
+                            })()}
                       </TableCell>
                     );
                   })}

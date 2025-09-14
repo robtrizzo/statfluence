@@ -46,7 +46,7 @@ export default async function Page({
 
   return (
     <div className="p-8">
-      <div className="w-full flex items-center justify-center my-4">
+      {/* <div className="w-full flex items-center justify-center my-4">
         <Link href="/" aria-label="Home">
           <Image
             src="/logo-statfluence.svg"
@@ -54,7 +54,7 @@ export default async function Page({
             className="h-12 md:h-14 w-auto hover:opacity-90 transition-opacity"
           />
         </Link>
-      </div>
+      </div> */}
       <TypographyH1>{displayName}</TypographyH1>
 
       <Suspense fallback={<Loader className="animate-spin" />}>
