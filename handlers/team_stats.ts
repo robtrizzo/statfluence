@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { playerStatsTable } from "@/db/schema";
+import { Stat } from "@/types/stat";
 import { and, eq, gte, lte, asc, inArray, desc } from "drizzle-orm";
 
 export async function getPastSeasonsTeamSummary(
@@ -40,7 +41,7 @@ export async function getPastSeasonsTeamSummary(
     console.warn(
       `No stats found for team ${teamid} in years ${startYear}-${endYear}`
     );
-    return [];
+    return null;
   }
 
   // todo use the below comment as a reference to filter for the past 5 games
@@ -88,54 +89,67 @@ type PlayerStat = {
 };
 
 function getTeamStatsSummary(stats: PlayerStat[]) {
-  const totals = stats.reduce(
-    (acc, stat) => {
-      acc.mp += stat.mp || 0;
-      acc.pts += stat.pts || 0;
-      acc.fg += stat.fg || 0;
-      acc.fga += stat.fga || 0;
-      acc.trb += stat.trb || 0;
-      acc.ast += stat.ast || 0;
-      acc.stl += stat.stl || 0;
-      acc.blk += stat.blk || 0;
-      acc.tov += stat.tov || 0;
-      return acc;
+  const formattedStats: Stat[] = [
+    {
+      name: "Minutes Played",
+      value: 0,
+      type: "basic",
     },
     {
-      mp: 0,
-      pts: 0,
-      fg: 0,
-      fga: 0,
-      trb: 0,
-      ast: 0,
-      stl: 0,
-      blk: 0,
-      tov: 0,
-    } as {
-      mp: number;
-      pts: number;
-      fg: number;
-      fga: number;
-      trb: number;
-      ast: number;
-      stl: number;
-      blk: number;
-      tov: number;
-    }
-  );
-  const averages = {
-    mp: totals.mp / stats.length || 0,
-    pts: totals.pts / stats.length || 0,
-    fg: totals.fg / stats.length || 0,
-    fga: totals.fga / stats.length || 0,
-    trb: totals.trb / stats.length || 0,
-    ast: totals.ast / stats.length || 0,
-    stl: totals.stl / stats.length || 0,
-    blk: totals.blk / stats.length || 0,
-    tov: totals.tov / stats.length || 0,
-  };
+      name: "Points",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Field Goals",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Field Goal Attempted",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Total Rebounds",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Assists",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Steals",
+      value: 0,
+      type: "basic",
+    },
+    {
+      name: "Blocks",
+      value: 0,
+      type: "basic",
+    },
+    { name: "Turnovers", value: 0, type: "basic" },
+  ];
+
+  for (let i = 0; i < stats.length; i++) {
+    formattedStats[0].value += stats[i].mp || 0;
+    formattedStats[1].value += stats[i].pts || 0;
+    formattedStats[2].value += stats[i].fg || 0;
+    formattedStats[3].value += stats[i].fga || 0;
+    formattedStats[4].value += stats[i].trb || 0;
+    formattedStats[5].value += stats[i].ast || 0;
+    formattedStats[6].value += stats[i].stl || 0;
+    formattedStats[7].value += stats[i].blk || 0;
+    formattedStats[8].value += stats[i].tov || 0;
+  }
+
+  formattedStats.forEach((stat) => {
+    stat.value = parseFloat((stat.value / stats.length).toFixed(1));
+  });
+
+  return formattedStats;
 
   // how to get the totals of the last 5 games?
-
-  return averages;
 }
