@@ -37,3 +37,9 @@ export const playerStatsTable = sqliteTable("player_stats", {
   gmSc: text("gm_sc"),
   seasonType: text("season_type"),
 });
+
+export const teamsTable = sqliteTable("teams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  abr: text("abr"),
+  full: text("full"),
+});
