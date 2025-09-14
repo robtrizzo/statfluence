@@ -1,6 +1,7 @@
 import StatsCard from "@/components/ui/stats-card";
 import { TypographyH1 } from "@/components/ui/typography";
 import { getPastSeasonsTeamSummary } from "@/handlers/team_stats";
+import { getTeamNameByAbr } from "@/handlers/teams";
 
 export default async function Page({
   params,
@@ -8,6 +9,8 @@ export default async function Page({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+
+  const name = await getTeamNameByAbr(teamId);
 
   const stats = await getPastSeasonsTeamSummary(teamId);
 
@@ -17,7 +20,7 @@ export default async function Page({
 
   return (
     <div className="px-4">
-      <TypographyH1>{teamId} Stats (2025)</TypographyH1>
+      <TypographyH1>{name} (2025)</TypographyH1>
       <StatsCard stats={stats} />
     </div>
   );
